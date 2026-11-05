@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>UPSC Notes Portal — 21-Day Build Plan</title>
+  <style>
+    @page { size: A4; margin: 0.75in; }
+    * { box-sizing: border-box; }
+    body {
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 10.5pt;
+      line-height: 1.45;
+      color: #1a1a1a;
+      margin: 0;
+      padding: 0.5in;
+    }
+    h1 { font-size: 16pt; margin: 0 0 4px; color: #0d3b66; }
+    .subtitle { font-size: 10pt; color: #555; margin-bottom: 16px; }
+    h2 { font-size: 12pt; margin: 18px 0 8px; color: #0d3b66; border-bottom: 1px solid #ccc; padding-bottom: 4px; }
+    table { width: 100%; border-collapse: collapse; font-size: 9.5pt; margin: 8px 0 14px; }
+    th, td { border: 1px solid #ccc; padding: 6px 8px; vertical-align: top; }
+    th { background: #e8eef3; text-align: left; font-weight: bold; }
+    tr:nth-child(even) td { background: #f9fafb; }
+    ul { margin: 4px 0 8px; padding-left: 18px; }
+    li { margin-bottom: 3px; }
+    .note { background: #f0f4f8; border-left: 3px solid #0d3b66; padding: 8px 12px; margin: 12px 0; font-size: 9.5pt; }
+    .footer { margin-top: 24px; font-size: 9pt; color: #666; text-align: center; }
+    @media print {
+      body { padding: 0; }
+      h2 { page-break-after: avoid; }
+      tr { page-break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+
+<h1>UPSC Notes Portal — Day-by-Day Build Plan</h1>
+<p class="subtitle">Subject-wise notes &amp; question papers · Admin upload · Student view/download · Cloudflare + Supabase + R2<br />
+Assumption: <strong>~2–3 hours per day</strong> (21 working days). Double daily hours to finish in ~10–11 days.</p>
+
+<div class="note">
+<strong>Goal:</strong> Replace WhatsApp/Telegram PDF hunting with one link — subject tiles (Polity, History, …), day/topic filters, in-browser PDF view, download. Only you upload; 1000+ students read via CDN (handles 10,000+ visitors). PDF storage: <strong>10 GB free</strong> on R2, then ~₹1.25/GB/month (50 GB cap in ops).
+</div>
+
+<h2>Week 1 — Accounts, backend, storage</h2>
+<table>
+  <thead>
+    <tr><th>Day</th><th>Focus</th><th>Tasks (checklist)</th><th>Done when</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Day 1</strong></td>
+      <td>Accounts &amp; repo</td>
+      <td>
+        <ul>
+          <li>Create GitHub account/repo (private) for code only</li>
+          <li>Sign up: Cloudflare, Supabase (free tier)</li>
+          <li>Install Node.js LTS, Git, VS Code/Cursor</li>
+          <li>Clone/init project folder; add .gitignore (.env, node_modules)</li>
+        </ul>
+      </td>
+      <td>Empty repo pushed; three cloud accounts ready</td>
+    </tr>
+    <tr>
+      <td><strong>Day 2</strong></td>
+      <td>Supabase database</td>
+      <td>
+        <ul>
+          <li>Create Supabase project (region closest to India if available)</li>
+          <li>Tables: subjects, materials (day, topic, title, type, file key, size, published)</li>
+          <li>Seed subject rows: Polity, History, Geography, Economy, etc.</li>
+          <li>Enable Row Level Security: public read if published; no public write</li>
+        </ul>
+      </td>
+      <td>Subjects visible in Supabase table editor; RLS on</td>
+    </tr>
+    <tr>
+      <td><strong>Day 3</strong></td>
+      <td>Admin auth</td>
+      <td>
+        <ul>
+          <li>Supabase Auth: email + strong password (your admin only)</li>
+          <li>RLS policies: INSERT/UPDATE/DELETE only for your user UUID</li>
+          <li>Document URL + anon key in local .env (never commit secrets)</li>
+        </ul>
+      </td>
+      <td>You can log in via Supabase Auth test; policies block anon writes</td>
+    </tr>
+    <tr>
+      <td><strong>Day 4</strong></td>
+      <td>Cloudflare R2</td>
+      <td>
+        <ul>
+          <li>Create R2 bucket (e.g. upsc-materials)</li>
+          <li>Enable public access via custom domain or r2.dev subdomain for PDF URLs</li>
+          <li>Create API token (R2 read/write); store in Supabase secrets for later</li>
+          <li>Set CORS: allow your site origin + PUT for uploads</li>
+        </ul>
+      </td>
+      <td>Test file uploadable in R2 dashboard; URL opens in browser</td>
+    </tr>
+    <tr>
+      <td><strong>Day 5</strong></td>
+      <td>Upload API (Edge Function)</td>
+      <td>
+        <ul>
+          <li>Function init_upload: verify JWT → return presigned PUT URL + material id</li>
+          <li>Function complete_upload: verify file exists → set published = true</li>
+          <li>Test with curl or Postman using admin token</li>
+        </ul>
+      </td>
+      <td>One PDF uploads end-to-end without using the website UI yet</td>
+    </tr>
+    <tr>
+      <td><strong>Day 6</strong></td>
+      <td>Frontend scaffold</td>
+      <td>
+        <ul>
+          <li>Create Astro + Tailwind app under apps/web</li>
+          <li>Env: Supabase URL, anon key, public R2 base URL</li>
+          <li>Layout: mobile-first header, footer, institute name</li>
+        </ul>
+      </td>
+      <td>npm run dev shows home page locally</td>
+    </tr>
+    <tr>
+      <td><strong>Day 7</strong></td>
+      <td>Subject tiles (student)</td>
+      <td>
+        <ul>
+          <li>Home page: grid of subject tiles from Supabase</li>
+          <li>Each tile links to /subject/[slug]</li>
+          <li>Basic styling: large tap targets for phones</li>
+        </ul>
+      </td>
+      <td>All subjects clickable; list page loads (can be empty)</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>Week 2 — Student UI, admin, go live</h2>
+<table>
+  <thead>
+    <tr><th>Day</th><th>Focus</th><th>Tasks</th><th>Done when</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Day 8</strong></td>
+      <td>Material list</td>
+      <td>
+        <ul>
+          <li>Subject page: fetch published materials for subject</li>
+          <li>Cards: title, Day N, topic, type (Notes / Paper)</li>
+          <li>Sort by day_number, then newest</li>
+        </ul>
+      </td>
+      <td>Uploaded test PDFs appear on subject page</td>
+    </tr>
+    <tr>
+      <td><strong>Day 9</strong></td>
+      <td>PDF view &amp; download</td>
+      <td>
+        <ul>
+          <li>Page /view/[id] with PDF.js embedded viewer</li>
+          <li>Download button → direct R2 URL (attachment disposition)</li>
+          <li>Fallback: “Open in new tab” for older phones</li>
+        </ul>
+      </td>
+      <td>Student can read without downloading; download works</td>
+    </tr>
+    <tr>
+      <td><strong>Day 10</strong></td>
+      <td>Filters</td>
+      <td>
+        <ul>
+          <li>Filter by day (dropdown), content type</li>
+          <li>Topic search (client-side or Supabase ilike)</li>
+        </ul>
+      </td>
+      <td>Find “Day 12 Polity” in under 10 seconds</td>
+    </tr>
+    <tr>
+      <td><strong>Day 11</strong></td>
+      <td>Admin login UI</td>
+      <td>
+        <ul>
+          <li>Route /admin/login (not linked from student nav)</li>
+          <li>Supabase client signInWithPassword</li>
+          <li>Protect /admin/* routes if no session</li>
+        </ul>
+      </td>
+      <td>Only you reach admin dashboard after login</td>
+    </tr>
+    <tr>
+      <td><strong>Day 12</strong></td>
+      <td>Admin upload UI</td>
+      <td>
+        <ul>
+          <li>Form: subject, day, topic, title, type, file</li>
+          <li>Call init_upload → PUT file to R2 → complete_upload</li>
+          <li>Progress indicator for large PDFs</li>
+        </ul>
+      </td>
+      <td>Upload from browser without Postman</td>
+    </tr>
+    <tr>
+      <td><strong>Day 13</strong></td>
+      <td>Admin manage content</td>
+      <td>
+        <ul>
+          <li>Table of all materials: edit metadata, unpublish, delete</li>
+          <li>Storage meter: sum file_size_bytes → show used / 50 GB; warn at 45 GB</li>
+        </ul>
+      </td>
+      <td>Wrong upload fixed without database access</td>
+    </tr>
+    <tr>
+      <td><strong>Day 14</strong></td>
+      <td>Deploy MVP</td>
+      <td>
+        <ul>
+          <li>Connect GitHub → Cloudflare Pages; build command for Astro</li>
+          <li>Set production env vars in Pages</li>
+          <li>Smoke test on real phone (mobile data)</li>
+          <li>Share *.pages.dev with 10–20 pilot students</li>
+        </ul>
+      </td>
+      <td>Public URL works; pilot feedback collected</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>Week 3 — Scale, content ops, launch</h2>
+<table>
+  <thead>
+    <tr><th>Day</th><th>Focus</th><th>Tasks</th><th>Done when</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Day 15</strong></td>
+      <td>Performance</td>
+      <td>
+        <ul>
+          <li>Cache-Control on catalog API or generate static catalog.json on publish</li>
+          <li>Lazy-load PDF.js only on view page</li>
+          <li>Cloudflare Web Analytics snippet (optional)</li>
+        </ul>
+      </td>
+      <td>Pages feel fast on mobile</td>
+    </tr>
+    <tr>
+      <td><strong>Day 16</strong></td>
+      <td>PDF compression</td>
+      <td>
+        <ul>
+          <li>Document Ghostscript workflow OR compress before upload</li>
+          <li>Target 30–40% smaller scans to save GB and cost</li>
+        </ul>
+      </td>
+      <td>Process written; one batch compressed and re-uploaded</td>
+    </tr>
+    <tr>
+      <td><strong>Day 17</strong></td>
+      <td>Batch upload (optional)</td>
+      <td>
+        <ul>
+          <li>CSV import: filename, subject, day, topic, type</li>
+          <li>Multi-file select on admin upload</li>
+        </ul>
+      </td>
+      <td>10 PDFs uploaded in one session</td>
+    </tr>
+    <tr>
+      <td><strong>Day 18</strong></td>
+      <td>Security pass</td>
+      <td>
+        <ul>
+          <li>Confirm no service-role key in frontend bundle</li>
+          <li>R2: no bucket listing; UUID object keys</li>
+          <li>Enable Supabase 2FA on admin account if available</li>
+          <li>Short Terms / personal use footer on site</li>
+        </ul>
+      </td>
+      <td>Security checklist signed off</td>
+    </tr>
+    <tr>
+      <td><strong>Day 19</strong></td>
+      <td>Load &amp; devices</td>
+      <td>
+        <ul>
+          <li>Test home + subject + PDF on Android (Chrome), iPhone (Safari)</li>
+          <li>Optional: simple load test on home + one PDF URL</li>
+        </ul>
+      </td>
+      <td>No errors under concurrent refreshes</td>
+    </tr>
+    <tr>
+      <td><strong>Day 20</strong></td>
+      <td>Content migration</td>
+      <td>
+        <ul>
+          <li>Upload current batch notes subject-wise (Polity, Current Affairs first)</li>
+          <li>Pin WhatsApp/Telegram message: one link, how to use tiles</li>
+        </ul>
+      </td>
+      <td>Most daily sends available on site</td>
+    </tr>
+    <tr>
+      <td><strong>Day 21</strong></td>
+      <td>Launch &amp; habit</td>
+      <td>
+        <ul>
+          <li>Custom domain on Cloudflare (optional)</li>
+          <li>PWA manifest + Add to Home Screen instructions</li>
+          <li>Rule: new content = upload first, then one chat message with link</li>
+          <li>Weekly backup: Postgres export + note R2 bucket name</li>
+        </ul>
+      </td>
+      <td>1000 students have the link; upload routine in place</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>Daily routine after launch</h2>
+<table>
+  <thead>
+    <tr><th>When</th><th>You do</th><th>Time</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>After each class / test</td><td>Admin → Upload → subject, day, topic, PDF → Publish → share link in group</td><td>5–10 min</td></tr>
+    <tr><td>Weekly</td><td>Check storage meter; unpublish outdated material; backup metadata</td><td>15 min</td></tr>
+    <tr><td>Monthly</td><td>Review analytics; top subjects; fix slow pages</td><td>20 min</td></tr>
+  </tbody>
+</table>
+
+<h2>Stack reminder</h2>
+<ul>
+  <li><strong>Site:</strong> Astro + Tailwind → Cloudflare Pages (₹0)</li>
+  <li><strong>Catalog + login:</strong> Supabase Postgres + Auth (₹0 at your scale)</li>
+  <li><strong>PDF files:</strong> Cloudflare R2 — 10 GB free, then ~₹50/mo at 50 GB total</li>
+  <li><strong>Students:</strong> no accounts; view/download only</li>
+</ul>
+
+<p class="footer">Project Sankalpa · UPSC Notes Portal build plan</p>
+
+</body>
+</html>

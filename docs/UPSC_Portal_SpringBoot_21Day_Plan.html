@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>UPSC Portal — 21-Day Spring Boot + React Plan</title>
+  <style>
+    @page { size: A4; margin: 0.65in; }
+    * { box-sizing: border-box; }
+    body {
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 10pt;
+      line-height: 1.4;
+      color: #1a1a1a;
+      margin: 0;
+      padding: 0.45in;
+    }
+    h1 { font-size: 15pt; margin: 0 0 4px; color: #0d3b66; }
+    .subtitle { font-size: 9.5pt; color: #555; margin-bottom: 14px; }
+    h2 { font-size: 11pt; margin: 14px 0 6px; color: #0d3b66; border-bottom: 1px solid #ccc; padding-bottom: 3px; }
+    table { width: 100%; border-collapse: collapse; font-size: 8.8pt; margin: 6px 0 12px; }
+    th, td { border: 1px solid #ccc; padding: 5px 6px; vertical-align: top; }
+    th { background: #e8eef3; text-align: left; }
+    tr:nth-child(even) td { background: #f9fafb; }
+    ul { margin: 2px 0 6px; padding-left: 16px; }
+    li { margin-bottom: 2px; }
+    .note { background: #f0f4f8; border-left: 3px solid #0d3b66; padding: 7px 10px; margin: 10px 0; font-size: 9pt; }
+    .tag { font-size: 8pt; background: #dbeafe; color: #1e40af; padding: 1px 6px; border-radius: 4px; white-space: nowrap; }
+    .footer { margin-top: 16px; font-size: 8.5pt; color: #666; text-align: center; }
+    @media print { body { padding: 0; } tr { page-break-inside: avoid; } }
+  </style>
+</head>
+<body>
+
+<h1>UPSC Notes Portal — 21-Day Plan (Spring Boot + React)</h1>
+<p class="subtitle">
+  Stack: <strong>Spring Boot 3</strong> (REST, JPA, Security, JWT) · <strong>React + Vite</strong> · <strong>PostgreSQL</strong> · <strong>Cloudflare R2</strong> (PDFs) · Pages + Render/Neon deploy<br />
+  Time: <strong>2–3 hours/day</strong> (≈21 days). Full-time: ~10–12 days. Storage: <strong>10 GB free</strong> on R2, <strong>50 GB</strong> app cap.
+</p>
+
+<div class="note">
+<strong>Learning outcome:</strong> You build a real REST API (not Supabase), secure admin APIs, file upload to S3-compatible storage, and a React SPA for students + admin. Students never log in; PDFs are served from R2 URLs, not streamed through Tomcat.
+</div>
+
+<h2>Week 1 — Spring Boot foundation (Days 1–7)</h2>
+<table>
+  <thead>
+    <tr><th>Day</th><th>Track</th><th>Tasks</th><th>Done when</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>1</strong></td>
+      <td><span class="tag">Setup</span></td>
+      <td>
+        <ul>
+          <li>Install JDK 17+ (OpenJDK), IntelliJ or VS Code, Docker Desktop, Git</li>
+          <li>Create GitHub repo <code>Project_sankalpa</code>; folders <code>backend/</code>, <code>frontend/</code></li>
+          <li><code>docker-compose.yml</code>: PostgreSQL 16, optional MinIO for local S3</li>
+          <li>Spring Initializr: Web, Validation, JPA, PostgreSQL, Flyway, Lombok (optional)</li>
+          <li><code>application-dev.yml</code> → local DB; <code>GET /actuator/health</code> or <code>/api/health</code></li>
+        </ul>
+      </td>
+      <td>App starts; health returns OK; Postgres connected</td>
+    </tr>
+    <tr>
+      <td><strong>2</strong></td>
+      <td><span class="tag">JPA</span></td>
+      <td>
+        <ul>
+          <li>Flyway <code>V1__subjects.sql</code> — table + seed (Polity, History, …)</li>
+          <li>Entity <code>Subject</code>, <code>SubjectRepository</code></li>
+          <li><code>SubjectService</code>, <code>PublicSubjectController</code> → <code>GET /api/public/subjects</code></li>
+          <li>Response DTOs (don’t expose entities directly)</li>
+        </ul>
+      </td>
+      <td>Postman/curl lists all subjects as JSON</td>
+    </tr>
+    <tr>
+      <td><strong>3</strong></td>
+      <td><span class="tag">JPA</span></td>
+      <td>
+        <ul>
+          <li>Flyway <code>V2__materials.sql</code> — subject FK, day_number, topic, title, content_type, object_key, file_size_bytes, published</li>
+          <li>Entity <code>Material</code>, <code>MaterialRepository</code> with query methods</li>
+          <li><code>GET /api/public/materials?subjectSlug=&amp;day=&amp;topic=</code> — only <code>published=true</code></li>
+          <li><code>GET /api/public/materials/{id}</code></li>
+        </ul>
+      </td>
+      <td>Filter by subject slug works; unpublished hidden</td>
+    </tr>
+    <tr>
+      <td><strong>4</strong></td>
+      <td><span class="tag">Spring</span></td>
+      <td>
+        <ul>
+          <li>Service layer for all public reads; @Transactional where needed</li>
+          <li>Bean Validation on DTOs (@NotBlank, @Min for day)</li>
+          <li><code>@RestControllerAdvice</code> — 404, 400 JSON errors</li>
+          <li>Seed 2–3 test materials via Flyway or <code>data.sql</code> (no real PDF yet)</li>
+        </ul>
+      </td>
+      <td>Clean error JSON; layered architecture in place</td>
+    </tr>
+    <tr>
+      <td><strong>5</strong></td>
+      <td><span class="tag">Security</span></td>
+      <td>
+        <ul>
+          <li>Add Spring Security; <code>SecurityFilterChain</code>: permit <code>/api/public/**</code>, <code>/api/auth/login</code></li>
+          <li>Flyway <code>V3__admin_user.sql</code> — admin email + BCrypt hash (from env at first run or fixed seed)</li>
+          <li><code>AdminUser</code> + <code>UserDetailsService</code> (single admin)</li>
+          <li>CSRF off for stateless API; CORS placeholder for localhost:5173</li>
+        </ul>
+      </td>
+      <td>Public GET works without token; admin routes return 401</td>
+    </tr>
+    <tr>
+      <td><strong>6</strong></td>
+      <td><span class="tag">JWT</span></td>
+      <td>
+        <ul>
+          <li>JWT dependency; <code>AuthController</code> <code>POST /api/auth/login</code> → access token</li>
+          <li><code>JwtAuthenticationFilter</code> before UsernamePasswordAuthenticationFilter</li>
+          <li>Secure <code>/api/admin/**</code> with <code>hasRole("ADMIN")</code></li>
+          <li>Postman: login → use Bearer token on admin call</li>
+        </ul>
+      </td>
+      <td>Login returns JWT; admin endpoint succeeds with header</td>
+    </tr>
+    <tr>
+      <td><strong>7</strong></td>
+      <td><span class="tag">Admin API</span></td>
+      <td>
+        <ul>
+          <li><code>AdminMaterialController</code>: PATCH publish/unpublish, PUT metadata, DELETE</li>
+          <li><code>GET /api/admin/materials</code> (includes unpublished)</li>
+          <li>Unit test 1–2 repository or service tests (JUnit 5)</li>
+        </ul>
+      </td>
+      <td>Full metadata CRUD without file upload yet</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>Week 2 — Files (Spring) + React student UI (Days 8–14)</h2>
+<table>
+  <thead>
+    <tr><th>Day</th><th>Track</th><th>Tasks</th><th>Done when</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>8</strong></td>
+      <td><span class="tag">Storage</span></td>
+      <td>
+        <ul>
+          <li><code>StorageService</code> interface: putObject, deleteObject, publicUrl</li>
+          <li>Dev: MinIO client (endpoint localhost); config via <code>@ConfigurationProperties</code></li>
+          <li>Upload test file from a small @SpringBootTest or manual bean test</li>
+        </ul>
+      </td>
+      <td>File lands in MinIO; URL opens in browser</td>
+    </tr>
+    <tr>
+      <td><strong>9</strong></td>
+      <td><span class="tag">Upload</span></td>
+      <td>
+        <ul>
+          <li><code>POST /api/admin/materials</code> multipart: file + JSON (subjectId, day, topic, title, type)</li>
+          <li>Stream to MinIO; save Material with objectKey, fileSizeBytes, published=true</li>
+          <li>Return DTO with <code>fileUrl</code> for React</li>
+        </ul>
+      </td>
+      <td>Real PDF upload creates DB row + object in MinIO</td>
+    </tr>
+    <tr>
+      <td><strong>10</strong></td>
+      <td><span class="tag">Quota</span></td>
+      <td>
+        <ul>
+          <li><code>StorageQuotaService</code> — sum file sizes; reject if &gt; 50 GB</li>
+          <li><code>GET /api/admin/storage-stats</code> → usedBytes, capBytes, warn at 45 GB</li>
+          <li>Public material DTO includes fileUrl pointing to MinIO/R2, not Spring download</li>
+        </ul>
+      </td>
+      <td>Upload blocked when quota exceeded (test with low cap in dev)</td>
+    </tr>
+    <tr>
+      <td><strong>11</strong></td>
+      <td><span class="tag">R2</span></td>
+      <td>
+        <ul>
+          <li>Cloudflare R2 bucket; API token; <code>application-prod.yml</code> S3Client → R2 endpoint</li>
+          <li>Same <code>StorageService</code> impl with profile switch MinIO vs R2</li>
+          <li>Upload one PDF to R2; verify public URL in Material response</li>
+        </ul>
+      </td>
+      <td>Prod storage config documented in docs/SETUP.md</td>
+    </tr>
+    <tr>
+      <td><strong>12</strong></td>
+      <td><span class="tag">React</span></td>
+      <td>
+        <ul>
+          <li><code>npm create vite@latest frontend -- --template react-ts</code></li>
+          <li>React Router, axios, Tailwind (or CSS modules matching mockup)</li>
+          <li><code>.env</code> <code>VITE_API_BASE_URL=http://localhost:8080</code></li>
+          <li>Layout: header “Sankalpa UPSC”, mobile-first</li>
+        </ul>
+      </td>
+      <td>Dev server runs; can call backend health/subjects</td>
+    </tr>
+    <tr>
+      <td><strong>13</strong></td>
+      <td><span class="tag">React</span></td>
+      <td>
+        <ul>
+          <li>Home page: subject tile grid from <code>GET /api/public/subjects</code></li>
+          <li>Route <code>/subjects/:slug</code> — material cards from public materials API</li>
+          <li>Filters: day dropdown, content type; client or query params</li>
+        </ul>
+      </td>
+      <td>Matches student mockup (tiles + list)</td>
+    </tr>
+    <tr>
+      <td><strong>14</strong></td>
+      <td><span class="tag">React</span></td>
+      <td>
+        <ul>
+          <li>Route <code>/materials/:id/view</code> — embed PDF.js with fileUrl from API</li>
+          <li>Download button → direct R2/MinIO URL</li>
+          <li>Loading + error states; empty subject message</li>
+        </ul>
+      </td>
+      <td>Student preview/download without admin UI</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>Week 3 — React admin, deploy, launch (Days 15–21)</h2>
+<table>
+  <thead>
+    <tr><th>Day</th><th>Track</th><th>Tasks</th><th>Done when</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>15</strong></td>
+      <td><span class="tag">React Admin</span></td>
+      <td>
+        <ul>
+          <li>Routes <code>/admin/login</code>, <code>/admin/*</code> protected (no token → redirect)</li>
+          <li>Login form → POST /api/auth/login; store JWT in sessionStorage</li>
+          <li>Axios interceptor adds Authorization header</li>
+        </ul>
+      </td>
+      <td>Admin shell + sidebar like mockup</td>
+    </tr>
+    <tr>
+      <td><strong>16</strong></td>
+      <td><span class="tag">React Admin</span></td>
+      <td>
+        <ul>
+          <li>Upload page: form fields + file input; FormData multipart to admin API</li>
+          <li>Progress UI; success toast; link to view on student site</li>
+        </ul>
+      </td>
+      <td>End-to-end upload from browser (admin) to storage</td>
+    </tr>
+    <tr>
+      <td><strong>17</strong></td>
+      <td><span class="tag">React Admin</span></td>
+      <td>
+        <ul>
+          <li>Materials table: list, edit metadata, unpublish, delete</li>
+          <li>Dashboard cards: storage-stats API, count published today</li>
+        </ul>
+      </td>
+      <td>Admin mockup features covered</td>
+    </tr>
+    <tr>
+      <td><strong>18</strong></td>
+      <td><span class="tag">Integration</span></td>
+      <td>
+        <ul>
+          <li>CORS: allow Cloudflare Pages origin + localhost</li>
+          <li>Cache-Control on public GET controllers (e.g. 5 min)</li>
+          <li>Spring profile prod; env vars for DB, JWT secret, R2 keys (never in git)</li>
+        </ul>
+      </td>
+      <td>Frontend + backend work together locally on phone via LAN IP (optional)</td>
+    </tr>
+    <tr>
+      <td><strong>19</strong></td>
+      <td><span class="tag">Deploy</span></td>
+      <td>
+        <ul>
+          <li>Neon (or Railway) PostgreSQL; run Flyway on prod DB</li>
+          <li>Deploy Spring Boot to Render/Fly.io; set env secrets</li>
+          <li>Smoke test public APIs on prod URL</li>
+        </ul>
+      </td>
+      <td>Backend live HTTPS</td>
+    </tr>
+    <tr>
+      <td><strong>20</strong></td>
+      <td><span class="tag">Deploy</span></td>
+      <td>
+        <ul>
+          <li><code>npm run build</code>; Cloudflare Pages → <code>frontend/dist</code></li>
+          <li><code>VITE_API_BASE_URL</code> = prod Spring URL</li>
+          <li>Test admin login + upload on prod; student view PDF from R2</li>
+        </ul>
+      </td>
+      <td>Full stack prod; share pages.dev link</td>
+    </tr>
+    <tr>
+      <td><strong>21</strong></td>
+      <td><span class="tag">Launch</span></td>
+      <td>
+        <ul>
+          <li>Upload first real batch (Polity, Current Affairs); compress large scans</li>
+          <li>Pin WhatsApp/Telegram: one URL, how to use tiles</li>
+          <li>Checklist: Android + iPhone, mobile data, 401 on admin without login</li>
+          <li>Optional stretch: presigned PUT upload (Phase 2 learning)</li>
+        </ul>
+      </td>
+      <td>1000-student ready process in place</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>After Day 21 (optional Phase 2 learning)</h2>
+<ul>
+  <li>Presigned R2 upload from React (Spring only signs URL — advanced memory/scaling pattern)</li>
+  <li>Spring Integration tests with @WebMvcTest + Testcontainers Postgres</li>
+  <li>Batch CSV import endpoint; PDF compression script before upload</li>
+  <li>PWA manifest; “New today” API filter</li>
+</ul>
+
+<h2>Daily habits (post-launch)</h2>
+<table>
+  <thead><tr><th>When</th><th>Action</th><th>Time</th></tr></thead>
+  <tbody>
+    <tr><td>After class</td><td>Admin upload → Publish → one chat message with subject/day link</td><td>5–10 min</td></tr>
+    <tr><td>Weekly</td><td>Check storage-stats; unpublish outdated PDFs</td><td>15 min</td></tr>
+  </tbody>
+</table>
+
+<h2>Key Spring topics touched (study map)</h2>
+<table>
+  <thead><tr><th>Topic</th><th>Days</th></tr></thead>
+  <tbody>
+    <tr><td>Boot, config profiles, actuator</td><td>1</td></tr>
+    <tr><td>JPA, Flyway, repositories</td><td>2–4</td></tr>
+    <tr><td>REST, DTOs, validation, advice</td><td>3–4</td></tr>
+    <tr><td>Spring Security, JWT</td><td>5–6</td></tr>
+    <tr><td>Multipart, S3 SDK, quotas</td><td>8–11</td></tr>
+    <tr><td>CORS, caching headers, deploy</td><td>18–20</td></tr>
+  </tbody>
+</table>
+
+<p class="footer">Project Sankalpa · Spring Boot + React · Save as PDF: Print → Save as PDF</p>
+</body>
+</html>
