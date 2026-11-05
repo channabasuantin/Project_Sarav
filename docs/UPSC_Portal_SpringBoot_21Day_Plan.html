@@ -38,7 +38,8 @@
 </p>
 
 <div class="note">
-<strong>Learning outcome:</strong> You build a real REST API (not Supabase), secure admin APIs, file upload to S3-compatible storage, and a React SPA for students + admin. Students never log in; PDFs are served from R2 URLs, not streamed through Tomcat.
+<strong>Learning outcome:</strong> You build a real REST API (not Supabase), secure admin APIs, file upload to S3-compatible storage, and a React SPA for students + admin. Students never log in; PDFs are served from R2 URLs, not streamed through Tomcat.<br /><br />
+<strong>No Docker Desktop?</strong> Use <strong>Neon</strong> (free cloud Postgres) or <strong>Homebrew PostgreSQL</strong> locally. For files, use a <strong>local folder</strong> in dev or <strong>Cloudflare R2</strong> directly — MinIO/Docker is optional.
 </div>
 
 <h2>Week 1 — Spring Boot foundation (Days 1–7)</h2>
@@ -52,11 +53,11 @@
       <td><span class="tag">Setup</span></td>
       <td>
         <ul>
-          <li>Install JDK 17+ (OpenJDK), IntelliJ or VS Code, Docker Desktop, Git</li>
+          <li>Install JDK 17+ (OpenJDK), IntelliJ or VS Code, Git — <strong>Docker optional</strong></li>
           <li>Create GitHub repo <code>Project_sankalpa</code>; folders <code>backend/</code>, <code>frontend/</code></li>
-          <li><code>docker-compose.yml</code>: PostgreSQL 16, optional MinIO for local S3</li>
+          <li><strong>Database (no Docker):</strong> Neon.tech free Postgres <em>or</em> <code>brew install postgresql@16</code> + create DB <code>sankalpa</code></li>
           <li>Spring Initializr: Web, Validation, JPA, PostgreSQL, Flyway, Lombok (optional)</li>
-          <li><code>application-dev.yml</code> → local DB; <code>GET /actuator/health</code> or <code>/api/health</code></li>
+          <li><code>application-dev.yml</code> → JDBC URL; <code>GET /actuator/health</code> or <code>/api/health</code></li>
         </ul>
       </td>
       <td>App starts; health returns OK; Postgres connected</td>
@@ -153,11 +154,12 @@
       <td>
         <ul>
           <li><code>StorageService</code> interface: putObject, deleteObject, publicUrl</li>
-          <li>Dev: MinIO client (endpoint localhost); config via <code>@ConfigurationProperties</code></li>
-          <li>Upload test file from a small @SpringBootTest or manual bean test</li>
+          <li><strong>No Docker:</strong> impl <code>LocalFileStorageService</code> → save under <code>./data/uploads</code>; expose URL via Spring resource handler or copy path to DTO</li>
+          <li><strong>Or:</strong> skip to R2 on Day 11 · <strong>Or with Docker:</strong> MinIO via Colima/compose</li>
+          <li>Config via <code>@ConfigurationProperties</code> (<code>storage.type=local|r2|minio</code>)</li>
         </ul>
       </td>
-      <td>File lands in MinIO; URL opens in browser</td>
+      <td>File saved; URL/path works in API response</td>
     </tr>
     <tr>
       <td><strong>9</strong></td>
@@ -165,11 +167,11 @@
       <td>
         <ul>
           <li><code>POST /api/admin/materials</code> multipart: file + JSON (subjectId, day, topic, title, type)</li>
-          <li>Stream to MinIO; save Material with objectKey, fileSizeBytes, published=true</li>
+          <li>Stream to storage (local folder or R2); save Material with objectKey, fileSizeBytes, published=true</li>
           <li>Return DTO with <code>fileUrl</code> for React</li>
         </ul>
       </td>
-      <td>Real PDF upload creates DB row + object in MinIO</td>
+      <td>Real PDF upload creates DB row + file on disk or R2</td>
     </tr>
     <tr>
       <td><strong>10</strong></td>
