@@ -2,13 +2,14 @@ package com.sankalpa.backend.service;
 
 import java.util.List;
 
-import org.springframework.http.HttpStatus;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
+
 
 import com.sankalpa.backend.dto.MaterialResponse;
 import com.sankalpa.backend.entity.Material;
+import com.sankalpa.backend.exception.ResourceNotFoundException;
 import com.sankalpa.backend.repository.MaterialRepository;
 
 
@@ -28,7 +29,7 @@ public class MaterialService {
     public MaterialResponse findById(Long id) {
         return repository.findByIdAndPublishedTrue(id)
                 .map(this::toResponse)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Material not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Material not found: " + id));
     }
 
     private MaterialResponse toResponse(Material m) {

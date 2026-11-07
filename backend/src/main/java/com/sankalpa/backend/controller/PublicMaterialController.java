@@ -11,6 +11,8 @@ import org.springframework.web.bind.annotation.RestController;
 import com.sankalpa.backend.dto.MaterialResponse;
 import com.sankalpa.backend.service.MaterialService;
 
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
 
 @RestController
@@ -19,12 +21,14 @@ import lombok.RequiredArgsConstructor;
 public class PublicMaterialController {
     private final MaterialService service;
 
-    @GetMapping
-    public List<MaterialResponse> list(@RequestParam(required = false) String subjectSlug,
-                                       @RequestParam(required = false) Integer day,
-                                       @RequestParam(required = false) String topic) {
-        return service.search(subjectSlug, day, topic);
-    }
+   @GetMapping
+public List<MaterialResponse> list(
+        @RequestParam(required = false) @Size(max = 100) String subjectSlug,
+        @RequestParam(required = false) @Min(1) Integer day,
+        @RequestParam(required = false) @Size(max = 255) String topic) {
+    return service.search(subjectSlug, day, topic);
+}
+
 
     @GetMapping("/{id}")
     public MaterialResponse get(@PathVariable Long id) {

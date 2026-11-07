@@ -1,0 +1,13 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "java",
+      "name": "Backend (dev)",
+      "request": "launch",
+      "mainClass": "com.sankalpa.backend.BackendApplication",
+      "projectName": "backend",
+      "args": "--spring.profiles.active=dev"
+    }
+  ]
+}
