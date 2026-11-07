@@ -13,7 +13,7 @@ public class SecurityConfig {
         http
             .csrf(csrf -> csrf.disable())   // stateless API, no cookies
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/public/**", "/actuator/health").permitAll()
+                .requestMatchers("/api/public/**", "/actuator/health","/error").permitAll()
                 .anyRequest().authenticated());
         return http.build();
     }
